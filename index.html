@@ -6,25 +6,33 @@
 <title>Ballast Fund Builder</title>
 <style>
   :root {
-    --paper: #f6f3ec; --card: #fffdf8; --ink: #1d1b16; --muted: #6b665b; --line: #ddd6c6;
-    --accent: #1f4d3a; --accent-ink: #fffdf8; --pass: #1f6b3f; --fail: #a3321f; --warn: #8a5a00;
-    --c-us: #1f4d3a; --c-intl: #5d8a6e; --c-bond: #b7894a; --c-real: #7a4f6d;
+    /* Beige ledger base; pink + purple only as accents (Hannah Montana Linux, worn to the office). */
+    --paper: #f6f1ea; --card: #fffbf7; --ink: #1f1a1d; --muted: #6e6468; --line: #e4d7d2;
+    --accent: #b0306f; --accent-ink: #fffbf7; --accent-2: #6b3fa0;
+    --pass: #1f6b3f; --fail: #a3321f; --warn: #8a5a00;
+    --c-us: #b0306f; --c-intl: #6b3fa0; --c-bond: #c19a5b; --c-real: #d48ab3;
+    --sheen: linear-gradient(90deg, var(--accent), var(--accent-2));
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --paper: #15140f; --card: #1e1c16; --ink: #ece7da; --muted: #a39d8f; --line: #36332a;
-      --accent: #8fc6a6; --accent-ink: #15140f; --pass: #7fcf9b; --fail: #f08a74; --warn: #e3b55a;
-      --c-us: #8fc6a6; --c-intl: #4f8b68; --c-bond: #d3a865; --c-real: #c08ab0;
+      --paper: #17131a; --card: #201a22; --ink: #efe6ea; --muted: #a99ca3; --line: #3a2f3a;
+      --accent: #f08cbf; --accent-ink: #17131a; --accent-2: #b99af0;
+      --pass: #7fcf9b; --fail: #f08a74; --warn: #e3b55a;
+      --c-us: #f08cbf; --c-intl: #b99af0; --c-bond: #d3a865; --c-real: #a8467c;
     }
   }
   * { box-sizing: border-box; }
+  ::selection { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans); }
-  header { border-bottom: 1px solid var(--line); padding: 20px 16px 0; }
+  header { padding: 20px 16px 0; position: relative; border-bottom: 1px solid var(--line); }
+  header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--sheen); opacity: .55; }
   .wrap { max-width: 1120px; margin: 0 auto; }
   .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .brand h1 { font: 600 28px/1 var(--serif); margin: 0; letter-spacing: -0.01em; }
+  .spark { color: var(--accent-2); font-size: .7em; vertical-align: super; margin-left: 2px; }
   .brand p { margin: 0; color: var(--muted); }
   .disclaimer { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
   nav.steps { display: flex; gap: 4px; margin-top: 16px; overflow-x: auto; }
@@ -32,7 +40,7 @@
     border: 0; background: none; padding: 10px 14px; font: 500 14px var(--sans); color: var(--muted);
     border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap;
   }
-  nav.steps button[aria-current="step"] { color: var(--ink); border-bottom-color: var(--accent); }
+  nav.steps button[aria-current="step"] { color: var(--ink); border-image: var(--sheen) 1; }
   nav.steps button:disabled { cursor: not-allowed; opacity: .45; }
   main { padding: 24px 16px 64px; }
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
@@ -67,11 +75,13 @@
   }
   .btn.ghost { background: none; color: var(--accent); }
   .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn:not(.ghost):not(:disabled):hover { background: var(--sheen); border-color: transparent; }
   .btn:disabled { opacity: .4; cursor: not-allowed; }
   .actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
   .error { color: var(--fail); font-size: 13px; margin-top: 4px; }
   .split { display: flex; height: 36px; border-radius: 6px; overflow: hidden; margin: 8px 0; }
-  .split div { display: flex; align-items: center; justify-content: center; font: 600 13px var(--sans); color: #fff; min-width: 0; overflow: hidden; }
+  .split div { display: flex; align-items: center; justify-content: center; font: 600 13px var(--sans); color: var(--accent-ink); min-width: 0; overflow: hidden; }
+  .split div.bonds { color: #1f1a1d; }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -110,7 +120,8 @@
   .fees small { display: block; color: var(--muted); font-size: 12px; }
   .fees b { font: 600 18px var(--serif); font-variant-numeric: tabular-nums; }
   @media (max-width: 560px) { .fees { grid-template-columns: 1fr; } }
-  .factsheet { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 32px; }
+  .factsheet { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 32px; position: relative; overflow: hidden; }
+  .factsheet::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--sheen); }
   .factsheet h2 { font-size: 30px; }
   .factsheet .policy { columns: 2; column-gap: 24px; font-size: 14px; }
   @media (max-width: 560px) { .factsheet .policy { columns: 1; } .factsheet { padding: 20px; } }
@@ -122,7 +133,7 @@
 <header>
   <div class="wrap">
     <div class="brand">
-      <h1>Ballast</h1>
+      <h1>Ballast<span class="spark" aria-hidden="true">✦</span></h1>
       <p>Build a fund you can explain in one breath. Index core, small satellites, low fees.</p>
     </div>
     <p class="disclaimer">Prototype. Every fund below is fictional and illustrative. Nothing here is investment advice.</p>
@@ -301,7 +312,7 @@ function coreStep() {
     <h3>Stocks / bonds</h3>
     <div class="split" aria-label="Stock bond split">
       <div style="flex:${eq};background:var(--c-us)">${fmt(eq)}% stocks</div>
-      <div style="flex:${bond};background:var(--c-bond)">${fmt(bond)}% bonds</div>
+      <div class="bonds" style="flex:${bond};background:var(--c-bond)">${fmt(bond)}% bonds</div>
     </div>
     <p class="hint">Bonds = age − 20, ${RISK[state.risk].adj >= 0 ? '+' : '−'} ${Math.abs(RISK[state.risk].adj)} for ${RISK[state.risk].label}, kept between 10% and 70%.
       Age ${state.age} → ${fmt(bond)}%. It moves one point a year as you age.</p>
@@ -351,7 +362,7 @@ function satStep() {
       ${BLOCKED.map(f => `<div class="fund blocked">
         <span class="tk">${f.t}</span>
         <div>${f.n}<div class="meta">${f.er.toFixed(2)}% fee</div><div class="why">${f.why}</div></div>
-        <span class="tag">🔒 Blocked</span>
+        <span class="tag">Not offered</span>
       </div>`).join('')}
     </div>
     <div class="actions">
@@ -427,7 +438,7 @@ function sidebar() {
     <div class="stat"><span>Core / satellites</span><b>${fmt(100 - sum(state.sats.map(s => s.w)))} / ${fmt(sum(state.sats.map(s => s.w)))}</b></div>
     <ul class="checks">${cs.map(c => `<li><span class="${c.ok ? 'ok' : 'no'}" aria-label="${c.ok ? 'pass' : 'fail'}">${c.ok ? '✓' : '✕'}</span>
       <span>${c.label}<span class="detail">${c.detail}</span></span></li>`).join('')}</ul>
-    <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Ready to publish.' : `${cs.filter(c => !c.ok).length} rule${cs.filter(c => !c.ok).length > 1 ? 's' : ''} failing.`}</div>
+    <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Ready to publish ✦' : `${cs.filter(c => !c.ok).length} rule${cs.filter(c => !c.ok).length > 1 ? 's' : ''} failing.`}</div>
   </aside>`;
 }
 
@@ -435,7 +446,7 @@ function factsheet() {
   const h = holdings(), d = feeDrag();
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   return `<article class="factsheet">
-    <p class="hint">Fund factsheet · ${today}</p>
+    <p class="hint"><span class="spark" aria-hidden="true">✦</span> Fund factsheet · ${today}</p>
     <h2>${esc(state.name)}</h2>
     <p class="lede">A ${RISK[state.risk].label.toLowerCase()} fund for a ${state.age}-year-old. ${fmt(h.eq)}% stocks, ${fmt(h.bond)}% bonds. Total fee ${d.er.toFixed(3)}% a year.</p>
     <div class="review-grid">${donut(h.rows)}<div>${legend(h.rows)}</div></div>
