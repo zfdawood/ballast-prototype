@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ballast Fund Builder</title>
+<style>
+  :root {
+    --paper: #f6f3ec; --card: #fffdf8; --ink: #1d1b16; --muted: #6b665b; --line: #ddd6c6;
+    --accent: #1f4d3a; --accent-ink: #fffdf8; --pass: #1f6b3f; --fail: #a3321f; --warn: #8a5a00;
+    --c-us: #1f4d3a; --c-intl: #5d8a6e; --c-bond: #b7894a; --c-real: #7a4f6d;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #15140f; --card: #1e1c16; --ink: #ece7da; --muted: #a39d8f; --line: #36332a;
+      --accent: #8fc6a6; --accent-ink: #15140f; --pass: #7fcf9b; --fail: #f08a74; --warn: #e3b55a;
+      --c-us: #8fc6a6; --c-intl: #4f8b68; --c-bond: #d3a865; --c-real: #c08ab0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans); }
+  header { border-bottom: 1px solid var(--line); padding: 20px 16px 0; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .brand h1 { font: 600 28px/1 var(--serif); margin: 0; letter-spacing: -0.01em; }
+  .brand p { margin: 0; color: var(--muted); }
+  .disclaimer { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+  nav.steps { display: flex; gap: 4px; margin-top: 16px; overflow-x: auto; }
+  nav.steps button {
+    border: 0; background: none; padding: 10px 14px; font: 500 14px var(--sans); color: var(--muted);
+    border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap;
+  }
+  nav.steps button[aria-current="step"] { color: var(--ink); border-bottom-color: var(--accent); }
+  nav.steps button:disabled { cursor: not-allowed; opacity: .45; }
+  main { padding: 24px 16px 64px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+  .layout.solo { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  section.card, aside.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  aside.card { position: sticky; top: 16px; }
+  h2 { font: 600 22px/1.2 var(--serif); margin: 0 0 4px; }
+  h3 { font: 600 16px/1.3 var(--serif); margin: 20px 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .opinion { border-left: 3px solid var(--accent); padding: 8px 12px; margin: 16px 0; font-family: var(--serif); font-style: italic; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 13px; }
+  input[type=text], input[type=number], textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--paper); color: var(--ink); font: inherit;
+  }
+  textarea { min-height: 54px; resize: vertical; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .seg button {
+    padding: 12px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+    border-radius: 8px; cursor: pointer; text-align: left; font: inherit;
+  }
+  .seg button strong { display: block; }
+  .seg button span { font-size: 12px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+    font: 600 14px var(--sans); cursor: pointer;
+  }
+  .btn.ghost { background: none; color: var(--accent); }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .error { color: var(--fail); font-size: 13px; margin-top: 4px; }
+  .split { display: flex; height: 36px; border-radius: 6px; overflow: hidden; margin: 8px 0; }
+  .split div { display: flex; align-items: center; justify-content: center; font: 600 13px var(--sans); color: #fff; min-width: 0; overflow: hidden; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .tag.core { border-color: var(--accent); color: var(--accent); }
+  .universe { display: grid; gap: 8px; }
+  .fund {
+    display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper);
+  }
+  .fund .tk { font: 600 13px ui-monospace, Menlo, monospace; }
+  .fund .meta { font-size: 12px; color: var(--muted); }
+  .fund.blocked { opacity: .75; border-style: dashed; }
+  .fund.blocked .why { font-size: 12px; color: var(--fail); margin-top: 2px; }
+  .sat { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: var(--paper); }
+  .sat-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .slots { font-size: 13px; color: var(--muted); }
+  .checks { list-style: none; padding: 0; margin: 8px 0 0; }
+  .checks li { display: grid; grid-template-columns: 20px 1fr; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .checks li:last-child { border-bottom: 0; }
+  .checks .ok { color: var(--pass); font-weight: 700; }
+  .checks .no { color: var(--fail); font-weight: 700; }
+  .checks .detail { display: block; color: var(--muted); font-size: 12px; }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
+  .stat b { font: 600 20px var(--serif); font-variant-numeric: tabular-nums; }
+  .verdict { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+  .verdict.ok { background: color-mix(in srgb, var(--pass) 14%, transparent); color: var(--pass); }
+  .verdict.no { background: color-mix(in srgb, var(--fail) 12%, transparent); color: var(--fail); }
+  .review-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: center; }
+  @media (max-width: 560px) { .review-grid { grid-template-columns: minmax(0, 1fr); } .seg { grid-template-columns: 1fr; } }
+  .fees { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+  .fees div { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--paper); }
+  .fees small { display: block; color: var(--muted); font-size: 12px; }
+  .fees b { font: 600 18px var(--serif); font-variant-numeric: tabular-nums; }
+  @media (max-width: 560px) { .fees { grid-template-columns: 1fr; } }
+  .factsheet { max-width: 760px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 32px; }
+  .factsheet h2 { font-size: 30px; }
+  .factsheet .policy { columns: 2; column-gap: 24px; font-size: 14px; }
+  @media (max-width: 560px) { .factsheet .policy { columns: 1; } .factsheet { padding: 20px; } }
+  .factsheet .policy p { break-inside: avoid; margin: 0 0 10px; }
+  @media print { header, .no-print { display: none !important; } body { background: #fff; } .factsheet { border: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>Ballast</h1>
+      <p>Build a fund you can explain in one breath. Index core, small satellites, low fees.</p>
+    </div>
+    <p class="disclaimer">Prototype. Every fund below is fictional and illustrative. Nothing here is investment advice.</p>
+    <nav class="steps" id="steps" aria-label="Builder steps"></nav>
+  </div>
+</header>
+<main><div class="wrap" id="app"></div></main>
+
+<script>
+// ---- House rules: the opinions this tool enforces. Change them here, nowhere else. ----
+const RULES = {
+  maxSatelliteTotal: 30,   // % of the fund outside the index core
+  maxSatellites: 4,
+  satMin: 2, satMax: 10,   // % per satellite
+  maxSectorTotal: 15,      // % in sector funds, combined
+  maxFundEr: 0.50,         // % — any fund above this is not offered at all
+  maxWeightedEr: 0.12,     // % — the whole fund
+  minThesis: 20,           // characters
+  intlMin: 30, intlMax: 40 // % of the stock core held internationally
+};
+const RISK = {
+  steady:   { label: 'Steady',   adj: 10,  blurb: 'Sleep through a crash' },
+  balanced: { label: 'Balanced', adj: 0,   blurb: 'The default for a reason' },
+  growth:   { label: 'Growth',   adj: -10, blurb: 'Long runway, strong stomach' }
+};
+const CLS = {
+  us:   { label: 'US stocks',   color: 'var(--c-us)' },
+  intl: { label: 'Intl stocks', color: 'var(--c-intl)' },
+  bond: { label: 'Bonds',       color: 'var(--c-bond)' },
+  real: { label: 'Real assets', color: 'var(--c-real)' }
+};
+const CORE = {
+  XTSM: { n: 'Total US Stock Market Index', er: 0.03, cls: 'us' },
+  XINT: { n: 'Total International Stock Index', er: 0.06, cls: 'intl' },
+  XAGG: { n: 'Total Bond Market Index', er: 0.04, cls: 'bond' },
+  XTIP: { n: 'Short-Term TIPS Index', er: 0.05, cls: 'bond' }
+};
+const SATELLITES = [
+  { t: 'XSCV', n: 'US Small-Cap Value Index', er: 0.07, cls: 'us', sleeve: 'eq' },
+  { t: 'XEMK', n: 'Emerging Markets Index', er: 0.10, cls: 'intl', sleeve: 'eq' },
+  { t: 'XDIV', n: 'Dividend Growth Index', er: 0.08, cls: 'us', sleeve: 'eq' },
+  { t: 'XREI', n: 'Real Estate (REIT) Index', er: 0.12, cls: 'real', sleeve: 'eq' },
+  { t: 'XGLD', n: 'Physical Gold Trust', er: 0.25, cls: 'real', sleeve: 'eq' },
+  { t: 'XTEC', n: 'Technology Sector Index', er: 0.39, cls: 'us', sleeve: 'eq', sector: true },
+  { t: 'XHLC', n: 'Health Care Sector Index', er: 0.35, cls: 'us', sleeve: 'eq', sector: true },
+  { t: 'XMUN', n: 'Intermediate Municipal Bond Index', er: 0.09, cls: 'bond', sleeve: 'bond' }
+];
+const BLOCKED = [
+  { t: 'XSTR', n: 'Star Manager Active Growth', er: 0.95, why: 'Over the 0.50% per-fund fee cap. The manager must beat the market by nearly 1% a year just to tie it.' },
+  { t: 'XNQ3', n: '3x Leveraged Nasdaq-100', er: 0.84, why: 'Leveraged funds reset daily and decay over long holds. Not a building block.' },
+  { t: 'XBTC', n: 'Bitcoin Strategy Fund', er: 0.95, why: 'No crypto. It has no cash flows to value, and Ballast only builds funds it can explain.' },
+  { t: 'XDSR', n: 'Disruptive Innovation Thematic', er: 0.75, why: 'Thematic funds launch after the theme has already run. Also over the fee cap.' },
+  { t: 'XMMF', n: 'Prime Money Market', er: 0.15, why: 'Cash is not a holding here. Keep the emergency fund outside the portfolio.' }
+];
+const SAT_BY_T = Object.fromEntries(SATELLITES.map(s => [s.t, s]));
+
+const state = {
+  step: 0,
+  published: false,
+  name: '', age: 40, risk: 'balanced', amount: 100000,
+  intl: 35,
+  sats: [] // { t, w, thesis }
+};
+
+// ---- Derived numbers ----
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const bondTarget = () => clamp(state.age - 20 + RISK[state.risk].adj, 10, 70);
+const tipsShare = () => (state.age >= 50 ? 0.3 : 0);
+const horizon = () => Math.max(10, 65 - state.age);
+
+function holdings() {
+  const bond = bondTarget(), eq = 100 - bond;
+  const eqSats = sum(state.sats.filter(s => SAT_BY_T[s.t].sleeve === 'eq').map(s => s.w));
+  const bondSats = sum(state.sats.filter(s => SAT_BY_T[s.t].sleeve === 'bond').map(s => s.w));
+  const eqCore = Math.max(0, eq - eqSats), bondCore = Math.max(0, bond - bondSats);
+  const intl = eqCore * state.intl / 100, tips = bondCore * tipsShare();
+  const rows = [
+    { t: 'XTSM', w: eqCore - intl, core: true, ...CORE.XTSM },
+    { t: 'XINT', w: intl, core: true, ...CORE.XINT },
+    { t: 'XAGG', w: bondCore - tips, core: true, ...CORE.XAGG },
+    { t: 'XTIP', w: tips, core: true, ...CORE.XTIP },
+    ...state.sats.map(s => ({ ...SAT_BY_T[s.t], ...s, core: false }))
+  ].filter(r => r.w > 0.001);
+  return { rows, eq, bond, eqSats, bondSats };
+}
+function sum(xs) { return xs.reduce((a, b) => a + b, 0); }
+function weightedEr(rows) { return sum(rows.map(r => r.w * r.er)) / 100; }
+function byClass(rows) {
+  const out = {};
+  for (const k of Object.keys(CLS)) out[k] = sum(rows.filter(r => r.cls === k).map(r => r.w));
+  return out;
+}
+
+function checks() {
+  const h = holdings(), er = weightedEr(h.rows);
+  const satTotal = sum(state.sats.map(s => s.w));
+  const sectorTotal = sum(state.sats.filter(s => SAT_BY_T[s.t].sector).map(s => s.w));
+  const thin = state.sats.filter(s => s.thesis.trim().length < RULES.minThesis).map(s => s.t);
+  return [
+    { ok: state.name.trim().length > 0, label: 'The fund has a name',
+      detail: 'If you can’t name it, you can’t explain it.' },
+    { ok: satTotal <= RULES.maxSatelliteTotal, label: `Satellites ≤ ${RULES.maxSatelliteTotal}% of the fund`,
+      detail: `Now ${fmt(satTotal)}%. The core does the work.` },
+    { ok: state.sats.length <= RULES.maxSatellites, label: `At most ${RULES.maxSatellites} satellites`,
+      detail: `Now ${state.sats.length}.` },
+    { ok: sectorTotal <= RULES.maxSectorTotal, label: `Sector funds ≤ ${RULES.maxSectorTotal}% combined`,
+      detail: `Now ${fmt(sectorTotal)}%. The total market already owns every sector.` },
+    { ok: h.eqSats <= h.eq / 2 && h.bondSats <= h.bond / 2, label: 'Satellites ≤ half of their side',
+      detail: `Stock satellites ${fmt(h.eqSats)}% of ${fmt(h.eq)}%, bond satellites ${fmt(h.bondSats)}% of ${fmt(h.bond)}%.` },
+    { ok: thin.length === 0, label: 'Every satellite has a written thesis',
+      detail: thin.length ? `Missing or under ${RULES.minThesis} characters: ${thin.join(', ')}.` : 'Each one says why it’s there.' },
+    { ok: er <= RULES.maxWeightedEr, label: `Fund expense ratio ≤ ${RULES.maxWeightedEr.toFixed(2)}%`,
+      detail: `Now ${er.toFixed(3)}%.` }
+  ];
+}
+const allPass = () => checks().every(c => c.ok);
+
+function feeDrag() {
+  const r = 0.06, n = horizon(), p = state.amount;
+  const fv = er => p * Math.pow(1 + r - er / 100, n);
+  const er = weightedEr(holdings().rows);
+  return { n, yours: fv(0.03) - fv(er), active: fv(0.03) - fv(0.60), er };
+}
+
+// ---- Formatting ----
+const fmt = v => (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, '');
+const money = v => '$' + Math.round(v).toLocaleString('en-US');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+// ---- Rendering ----
+const STEPS = ['1 · Profile', '2 · Core', '3 · Satellites', '4 · Review'];
+const profileValid = () => state.age >= 18 && state.age <= 85 && state.amount >= 1000;
+
+function render() {
+  const nav = document.getElementById('steps');
+  nav.innerHTML = STEPS.map((s, i) =>
+    `<button data-go="${i}" ${i === state.step && !state.published ? 'aria-current="step"' : ''}
+      ${i > 0 && !profileValid() ? 'disabled' : ''}>${s}</button>`).join('');
+  const app = document.getElementById('app');
+  if (state.published) { app.innerHTML = factsheet(); return; }
+  const body = [profileStep, coreStep, satStep, reviewStep][state.step]();
+  app.innerHTML = state.step === 0
+    ? `<div class="layout solo">${body}</div>`
+    : `<div class="layout">${body}${sidebar()}</div>`;
+}
+
+function profileStep() {
+  return `<section class="card">
+    <h2>Who is this fund for?</h2>
+    <p class="lede">Three answers. Ballast sets your stock/bond split from them, and you don’t get to override it.</p>
+    <label for="name">Fund name <span class="hint">— e.g. “Acme Family Fund”</span></label>
+    <input id="name" type="text" data-bind="name" value="${esc(state.name)}" maxlength="60">
+    <label for="age">Your age</label>
+    <input id="age" type="number" data-bind="age" min="18" max="85" value="${state.age}">
+    ${state.age < 18 || state.age > 85 ? '<div class="error">Ballast builds funds for ages 18–85.</div>' : ''}
+    <label>How do you want it to feel?</label>
+    <div class="seg" role="group" aria-label="Risk tolerance">
+      ${Object.entries(RISK).map(([k, r]) => `<button type="button" data-risk="${k}" aria-pressed="${state.risk === k}">
+        <strong>${r.label}</strong><span>${r.blurb}</span></button>`).join('')}
+    </div>
+    <p class="hint">There is no “aggressive”. Growth already holds as little in bonds as Ballast allows.</p>
+    <label for="amount">Starting amount (USD)</label>
+    <input id="amount" type="number" data-bind="amount" min="1000" step="1000" value="${state.amount}">
+    ${state.amount < 1000 ? '<div class="error">Start with at least $1,000.</div>' : ''}
+    <div class="actions"><span></span>
+      <button class="btn" data-go="1" ${profileValid() ? '' : 'disabled'}>Set my core →</button></div>
+  </section>`;
+}
+
+function coreStep() {
+  const bond = bondTarget(), eq = 100 - bond;
+  const intl = eq * state.intl / 100, tips = bond * tipsShare();
+  return `<section class="card">
+    <h2>The core</h2>
+    <p class="lede">At least 70% of every Ballast fund is four index funds. This is the part that does the work.</p>
+    <h3>Stocks / bonds</h3>
+    <div class="split" aria-label="Stock bond split">
+      <div style="flex:${eq};background:var(--c-us)">${fmt(eq)}% stocks</div>
+      <div style="flex:${bond};background:var(--c-bond)">${fmt(bond)}% bonds</div>
+    </div>
+    <p class="hint">Bonds = age − 20, ${RISK[state.risk].adj >= 0 ? '+' : '−'} ${Math.abs(RISK[state.risk].adj)} for ${RISK[state.risk].label}, kept between 10% and 70%.
+      Age ${state.age} → ${fmt(bond)}%. It moves one point a year as you age.</p>
+    <div class="opinion">The split is locked. Picking your own stock/bond ratio is the decision people get wrong most, usually right after a good year.</div>
+    <h3>International share of stocks</h3>
+    <label for="intl">${state.intl}% international <span class="hint">— allowed ${RULES.intlMin}–${RULES.intlMax}%</span></label>
+    <input id="intl" type="range" data-bind="intl" min="${RULES.intlMin}" max="${RULES.intlMax}" step="1" value="${state.intl}">
+    <p class="hint">Under ${RULES.intlMin}% is home bias. Over ${RULES.intlMax}% is a currency bet.</p>
+    <h3>Core holdings before satellites</h3>
+    <table>
+      <thead><tr><th>Ticker</th><th>Fund</th><th class="num">Fee</th><th class="num">Weight</th></tr></thead>
+      <tbody>
+        ${coreRow('XTSM', eq - intl)}${coreRow('XINT', intl)}${coreRow('XAGG', bond - tips)}${coreRow('XTIP', tips)}
+      </tbody>
+    </table>
+    <p class="hint">${state.age >= 50 ? 'From 50, 30% of bonds go to short-term TIPS to protect against inflation near retirement.' : 'TIPS join the bond core at age 50.'}</p>
+    <div class="actions">
+      <button class="btn ghost" data-go="0">← Profile</button>
+      <button class="btn" data-go="2">Add satellites →</button>
+    </div>
+  </section>`;
+}
+function coreRow(t, w) {
+  return `<tr><td class="tk">${t}</td><td>${CORE[t].n}</td><td class="num">${CORE[t].er.toFixed(2)}%</td><td class="num">${fmt(w)}%</td></tr>`;
+}
+
+function satStep() {
+  const chosen = new Set(state.sats.map(s => s.t));
+  const full = state.sats.length >= RULES.maxSatellites;
+  return `<section class="card">
+    <h2>Satellites</h2>
+    <p class="lede">Optional. Up to ${RULES.maxSatellites} small positions, ${RULES.satMin}–${RULES.satMax}% each, ${RULES.maxSatelliteTotal}% in total. Each one needs a sentence saying why.</p>
+    <div class="opinion">A satellite you can’t justify in writing is a satellite you’ll sell at the bottom.</div>
+    <h3>Your satellites <span class="slots">${state.sats.length} of ${RULES.maxSatellites} slots</span></h3>
+    ${state.sats.length ? state.sats.map(satEditor).join('') : '<p class="hint">None yet. A fund of only the core is a perfectly good fund.</p>'}
+    <h3>Available</h3>
+    <div class="universe">
+      ${SATELLITES.map(f => `<div class="fund">
+        <span class="tk">${f.t}</span>
+        <div>${f.n}<div class="meta">${f.er.toFixed(2)}% fee · ${CLS[f.cls].label}${f.sector ? ' · sector fund' : ''}</div></div>
+        <button class="btn small ${chosen.has(f.t) ? 'ghost' : ''}" data-add="${f.t}" ${chosen.has(f.t) || full ? 'disabled' : ''}>
+          ${chosen.has(f.t) ? 'Added' : 'Add'}</button>
+      </div>`).join('')}
+    </div>
+    <h3>Not offered</h3>
+    <div class="universe">
+      ${BLOCKED.map(f => `<div class="fund blocked">
+        <span class="tk">${f.t}</span>
+        <div>${f.n}<div class="meta">${f.er.toFixed(2)}% fee</div><div class="why">${f.why}</div></div>
+        <span class="tag">🔒 Blocked</span>
+      </div>`).join('')}
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-go="1">← Core</button>
+      <button class="btn" data-go="3">Review the fund →</button>
+    </div>
+  </section>`;
+}
+function satEditor(s) {
+  const f = SAT_BY_T[s.t];
+  return `<div class="sat">
+    <div class="sat-head"><div><span class="tk">${f.t}</span> ${f.n}</div>
+      <button class="btn small ghost" data-remove="${f.t}" aria-label="Remove ${f.t}">Remove</button></div>
+    <label for="w-${f.t}">${s.w}% of the fund</label>
+    <input id="w-${f.t}" type="range" min="${RULES.satMin}" max="${RULES.satMax}" step="1" value="${s.w}" data-weight="${f.t}">
+    <label for="th-${f.t}">Thesis <span class="hint">— why this belongs here, at least ${RULES.minThesis} characters</span></label>
+    <textarea id="th-${f.t}" data-thesis="${f.t}" maxlength="240" placeholder="e.g. Small value has paid a premium over long periods and I can hold it through a decade of lagging.">${esc(s.thesis)}</textarea>
+  </div>`;
+}
+
+function donut(rows) {
+  const c = byClass(rows), R = 70, C = 2 * Math.PI * R;
+  let off = 0;
+  const arcs = Object.entries(c).filter(([, w]) => w > 0).map(([k, w]) => {
+    const len = C * w / 100;
+    const a = `<circle r="${R}" cx="90" cy="90" fill="none" stroke="${CLS[k].color}" stroke-width="28"
+      stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 90 90)"><title>${CLS[k].label} ${fmt(w)}%</title></circle>`;
+    off += len; return a;
+  }).join('');
+  return `<svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="Allocation by asset class">${arcs}
+    <text x="90" y="86" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="currentColor">${rows.length}</text>
+    <text x="90" y="106" text-anchor="middle" font-size="11" fill="currentColor" opacity=".6">holdings</text></svg>`;
+}
+function legend(rows) {
+  const c = byClass(rows);
+  return `<div class="legend">${Object.entries(c).filter(([, w]) => w > 0)
+    .map(([k, w]) => `<span><i style="background:${CLS[k].color}"></i>${CLS[k].label} ${fmt(w)}%</span>`).join('')}</div>`;
+}
+
+function reviewStep() {
+  const h = holdings(), d = feeDrag(), ok = allPass();
+  return `<section class="card">
+    <h2>${state.name.trim() ? esc(state.name) : 'Untitled fund'}</h2>
+    <p class="lede">${RISK[state.risk].label} · age ${state.age} · ${money(state.amount)} · ${d.n}-year horizon</p>
+    <div class="review-grid">${donut(h.rows)}<div>${legend(h.rows)}</div></div>
+    <h3>Holdings</h3>
+    <table>
+      <thead><tr><th>Ticker</th><th>Fund</th><th>Role</th><th class="num">Fee</th><th class="num">Weight</th><th class="num">Dollars</th></tr></thead>
+      <tbody>${h.rows.map(r => `<tr><td class="tk">${r.t}</td><td>${r.n}</td>
+        <td><span class="tag ${r.core ? 'core' : ''}">${r.core ? 'Core' : 'Satellite'}</span></td>
+        <td class="num">${r.er.toFixed(2)}%</td><td class="num">${fmt(r.w)}%</td><td class="num">${money(state.amount * r.w / 100)}</td></tr>`).join('')}</tbody>
+    </table>
+    <h3>What the fees cost you over ${d.n} years</h3>
+    <p class="hint">In dollars, not percentages. Assumes 6% a year before fees, measured against the cheapest possible fund (0.03%).</p>
+    <div class="fees">
+      <div><small>This fund (${d.er.toFixed(3)}%)</small><b>${money(d.yours)}</b></div>
+      <div><small>Typical active fund (0.60%)</small><b>${money(d.active)}</b></div>
+      <div><small>You keep instead</small><b>${money(d.active - d.yours)}</b></div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-go="2">← Satellites</button>
+      <button class="btn" data-publish ${ok ? '' : 'disabled'}>Publish factsheet</button>
+    </div>
+    ${ok ? '' : '<p class="error" style="text-align:right">Fix the failing house rules to publish.</p>'}
+  </section>`;
+}
+
+function sidebar() {
+  const cs = checks(), ok = cs.every(c => c.ok), h = holdings();
+  return `<aside class="card" aria-label="House rules">
+    <h2 style="font-size:18px">House rules</h2>
+    <div class="stat"><span>Fund fee</span><b>${weightedEr(h.rows).toFixed(3)}%</b></div>
+    <div class="stat"><span>Core / satellites</span><b>${fmt(100 - sum(state.sats.map(s => s.w)))} / ${fmt(sum(state.sats.map(s => s.w)))}</b></div>
+    <ul class="checks">${cs.map(c => `<li><span class="${c.ok ? 'ok' : 'no'}" aria-label="${c.ok ? 'pass' : 'fail'}">${c.ok ? '✓' : '✕'}</span>
+      <span>${c.label}<span class="detail">${c.detail}</span></span></li>`).join('')}</ul>
+    <div class="verdict ${ok ? 'ok' : 'no'}">${ok ? 'Ready to publish.' : `${cs.filter(c => !c.ok).length} rule${cs.filter(c => !c.ok).length > 1 ? 's' : ''} failing.`}</div>
+  </aside>`;
+}
+
+function factsheet() {
+  const h = holdings(), d = feeDrag();
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return `<article class="factsheet">
+    <p class="hint">Fund factsheet · ${today}</p>
+    <h2>${esc(state.name)}</h2>
+    <p class="lede">A ${RISK[state.risk].label.toLowerCase()} fund for a ${state.age}-year-old. ${fmt(h.eq)}% stocks, ${fmt(h.bond)}% bonds. Total fee ${d.er.toFixed(3)}% a year.</p>
+    <div class="review-grid">${donut(h.rows)}<div>${legend(h.rows)}</div></div>
+    <h3>Holdings</h3>
+    <table><thead><tr><th>Ticker</th><th>Fund</th><th class="num">Weight</th></tr></thead>
+      <tbody>${h.rows.map(r => `<tr><td class="tk">${r.t}</td><td>${r.n}</td><td class="num">${fmt(r.w)}%</td></tr>`).join('')}</tbody></table>
+    ${state.sats.length ? `<h3>Why the satellites are here</h3>${state.sats.map(s => `<p><b>${s.t}</b> (${s.w}%): ${esc(s.thesis)}</p>`).join('')}` : ''}
+    <h3>Policy</h3>
+    <div class="policy">
+      <p><b>Rebalancing.</b> Checked once a year on the fund’s anniversary. Any holding more than 5 points from its target is traded back. Otherwise, nothing happens.</p>
+      <p><b>Glide path.</b> Bonds rise one point a year until they reach 70%. TIPS join the bond core at 50.</p>
+      <p><b>Changes.</b> A satellite can be swapped only with a new written thesis. The core is never swapped.</p>
+      <p><b>Fees.</b> Over ${d.n} years, this fund’s fees cost about ${money(d.yours)} on ${money(state.amount)}, versus ${money(d.active)} for a typical active fund.</p>
+    </div>
+    <div class="actions no-print">
+      <button class="btn ghost" data-unpublish>← Back to the builder</button>
+      <button class="btn" onclick="window.print()">Print factsheet</button>
+    </div>
+  </article>`;
+}
+
+// ---- Events ----
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.go) { state.step = +b.dataset.go; state.published = false; }
+  else if (b.dataset.risk) state.risk = b.dataset.risk;
+  else if (b.dataset.add) state.sats.push({ t: b.dataset.add, w: 5, thesis: '' });
+  else if (b.dataset.remove) state.sats = state.sats.filter(s => s.t !== b.dataset.remove);
+  else if ('publish' in b.dataset) state.published = true;
+  else if ('unpublish' in b.dataset) state.published = false;
+  else return;
+  render();
+  window.scrollTo({ top: 0 });
+});
+
+// Inputs update state and re-render only the parts that depend on them, so focus isn't lost while typing.
+document.addEventListener('input', e => {
+  const el = e.target, d = el.dataset;
+  if (d.bind) {
+    state[d.bind] = el.type === 'text' ? el.value : Number(el.value);
+    if (d.bind === 'name') { refreshNav(); return; }
+    // Re-rendering mid-drag would replace the slider under the pointer; wait for 'change'.
+    if (el.type === 'range') { el.previousElementSibling.firstChild.textContent = `${el.value}% international `; return; }
+  } else if (d.weight) {
+    state.sats.find(s => s.t === d.weight).w = Number(el.value);
+    el.previousElementSibling.textContent = `${el.value}% of the fund`;
+    refreshSidebar(); return;
+  } else if (d.thesis) {
+    state.sats.find(s => s.t === d.thesis).thesis = el.value;
+    refreshSidebar(); return;
+  } else return;
+  rerenderKeepingFocus(el.id);
+});
+document.addEventListener('change', e => {
+  if (e.target.type === 'range' && e.target.dataset.bind) rerenderKeepingFocus(e.target.id);
+});
+function refreshSidebar() {
+  const old = document.querySelector('aside.card');
+  if (old) old.outerHTML = sidebar();
+}
+function refreshNav() {
+  const next = document.querySelector('[data-go="1"].btn');
+  if (next) next.disabled = !profileValid();
+}
+function rerenderKeepingFocus(id) {
+  const prev = document.getElementById(id), pos = prev && prev.selectionStart;
+  render();
+  const el = document.getElementById(id);
+  if (el) { el.focus(); try { if (pos != null) el.setSelectionRange(pos, pos); } catch (_) {} }
+}
+
+render();
+</script>
+</body>
+</html>
